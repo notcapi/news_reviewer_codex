@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Tuple
+from urllib.parse import urlparse
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi import FastAPI, Form, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -24,6 +26,9 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = BASE_DIR / "templates"
 STATIC_DIR = BASE_DIR / "static"
+OUTPUT_DIR = Path(
+    os.environ.get("ARTICLE_ANALYST_OUTPUT_DIR", str(Path.cwd() / "outputs"))
+).resolve()
 
 
 @lru_cache()
@@ -63,6 +68,9 @@ app = FastAPI(title="Article Analyst Web")
 
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+if OUTPUT_DIR.exists():
+    app.mount("/outputs", StaticFiles(directory=OUTPUT_DIR), name="analysis-outputs")
 
 FRONTEND_ORIGIN = os.environ.get("FRONTEND_ORIGIN", "http://localhost:3000")
 
@@ -195,4 +203,151 @@ async def analyze_api(payload: AnalyzePayload) -> Dict[str, Any]:
     }
 
 
+@app.get("/api/history")
+async def history_api(
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+) -> Dict[str, Any]:
+    total, stats, entries = _collect_history(limit=limit, offset=offset)
+    return {
+        "total": total,
+        "stats": stats,
+        "items": entries,
+    }
+
+
 __all__ = ["app", "get_analyzer"]
+
+
+def _collect_history(limit: int, offset: int) -> Tuple[int, Dict[str, Any], List[Dict[str, Any]]]:
+    if not OUTPUT_DIR.exists():
+        return 0, {
+            "total_reports": 0,
+            "total_claims": 0,
+            "total_fact_checks": 0,
+            "total_questions": 0,
+            "latest_generated_at": None,
+        }, []
+
+    json_files = sorted(OUTPUT_DIR.glob("*.json"))
+    total = len(json_files)
+    if total == 0:
+        return total, {
+            "total_reports": 0,
+            "total_claims": 0,
+            "total_fact_checks": 0,
+            "total_questions": 0,
+            "latest_generated_at": None,
+        }, []
+
+    entries: List[Dict[str, Any]] = []
+    aggregated = {
+        "total_reports": total,
+        "total_claims": 0,
+        "total_fact_checks": 0,
+        "total_questions": 0,
+        "latest_generated_at": None,
+    }
+
+    ordered = list(reversed(json_files))
+
+    for idx, json_path in enumerate(ordered):
+        try:
+            data = json.loads(json_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            continue
+
+        analysis = data.get("analysis", {})
+        summary = analysis.get("summary", "")
+        claims = analysis.get("claims", []) or []
+        questions = analysis.get("critical_questions", []) or []
+        fact_checks = analysis.get("fact_check_targets", []) or []
+        timeline = analysis.get("timeline", []) or []
+
+        aggregated["total_claims"] += len(claims)
+        aggregated["total_fact_checks"] += len(fact_checks)
+        aggregated["total_questions"] += len(questions)
+
+        base_name = json_path.stem
+        markdown_path = json_path.with_suffix(".md")
+
+        source_url, detected_title, generated_text = _parse_markdown_metadata(markdown_path)
+        generated_iso = _parse_generated_timestamp(base_name, generated_text)
+
+        if aggregated["latest_generated_at"] is None and generated_iso is not None:
+            aggregated["latest_generated_at"] = generated_iso
+
+        source_domain = None
+        if source_url:
+            try:
+                source_domain = urlparse(source_url).netloc or None
+            except ValueError:
+                source_domain = None
+
+        if offset <= idx < offset + limit:
+            entries.append(
+                {
+                    "id": base_name,
+                    "summary": summary,
+                    "source_url": source_url,
+                    "source_domain": source_domain,
+                    "title": detected_title,
+                    "generated_at": generated_iso,
+                    "claims_count": len(claims),
+                    "fact_check_count": len(fact_checks),
+                    "question_count": len(questions),
+                    "timeline_count": len(timeline),
+                    "json_filename": json_path.name,
+                    "markdown_filename": markdown_path.name if markdown_path.exists() else None,
+                    "markdown_url": f"/outputs/{markdown_path.name}" if markdown_path.exists() else None,
+                    "json_url": f"/outputs/{json_path.name}",
+                    "timeline": timeline,
+                    "critical_questions": questions,
+                    "fact_check_targets": fact_checks,
+                }
+            )
+
+    return total, aggregated, entries
+
+
+def _parse_markdown_metadata(md_path: Path) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    source_url: Optional[str] = None
+    detected_title: Optional[str] = None
+    generated_at: Optional[str] = None
+
+    if not md_path.exists():
+        return source_url, detected_title, generated_at
+
+    try:
+        with md_path.open("r", encoding="utf-8") as handle:
+            for line in handle:
+                stripped = line.strip()
+                if stripped.startswith("- Fuente:") and source_url is None:
+                    source_url = stripped.split(":", 1)[1].strip() or None
+                elif stripped.startswith("- Título detectado:") and detected_title is None:
+                    detected_title = stripped.split(":", 1)[1].strip() or None
+                elif stripped.startswith("- Fecha de generación:") and generated_at is None:
+                    generated_at = stripped.split(":", 1)[1].strip() or None
+
+                if source_url and detected_title and generated_at:
+                    break
+    except OSError:
+        return None, None, None
+
+    return source_url, detected_title, generated_at
+
+
+def _parse_generated_timestamp(stem: str, generated_text: Optional[str]) -> Optional[str]:
+    if generated_text:
+        try:
+            dt = datetime.strptime(generated_text, "%Y-%m-%d %H:%M UTC").replace(tzinfo=timezone.utc)
+            return dt.isoformat()
+        except ValueError:
+            pass
+
+    try:
+        ts_part = stem.split("_", 1)[0]
+        dt = datetime.strptime(ts_part, "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
+        return dt.isoformat()
+    except ValueError:
+        return None

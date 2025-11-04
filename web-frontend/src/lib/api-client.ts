@@ -1,4 +1,4 @@
-import { AnalyzerResponse, InputType } from "@/types/analysis";
+import type { AnalyzerResponse, HistoryResponse, InputType } from "@/types/analysis";
 
 const API_BASE = process.env.NEXT_PUBLIC_ANALYZER_API ?? "http://localhost:8000";
 
@@ -67,4 +67,33 @@ async function safeParseJSON(response: Response): Promise<unknown> {
   } catch {
     return null;
   }
+}
+
+export async function fetchHistory(
+  limit = 10,
+  offset = 0,
+  init?: RequestInit & { next?: { revalidate?: number | false; tags?: string[] } },
+): Promise<HistoryResponse> {
+  const url = new URL(`${API_BASE}/api/history`);
+  url.searchParams.set("limit", String(limit));
+  url.searchParams.set("offset", String(offset));
+
+  const response = await fetch(url.toString(), init);
+
+  if (!response.ok) {
+    const errorBody = await safeParseJSON(response);
+    let detail: string | null = null;
+
+    if (errorBody && typeof errorBody === "object" && "detail" in errorBody) {
+      const maybeDetail = (errorBody as { detail?: unknown }).detail;
+      if (typeof maybeDetail === "string") {
+        detail = maybeDetail;
+      }
+    }
+
+    throw new Error(detail || response.statusText || "No se pudo recuperar el historial");
+  }
+
+  const data = (await response.json()) as HistoryResponse;
+  return data;
 }

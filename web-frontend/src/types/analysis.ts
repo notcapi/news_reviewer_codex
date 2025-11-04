@@ -46,3 +46,37 @@ export interface AnalyzerResponse {
 }
 
 export type InputType = "url" | "text";
+
+export interface HistoryEntry {
+  id: string;
+  summary: string;
+  source_url: string | null;
+  source_domain: string | null;
+  title: string | null;
+  generated_at: string | null;
+  claims_count: number;
+  fact_check_count: number;
+  question_count: number;
+  timeline_count: number;
+  json_filename: string;
+  markdown_filename: string | null;
+  markdown_url: string | null;
+  json_url: string;
+  timeline: TimelineEvent[];
+  critical_questions: string[];
+  fact_check_targets: FactCheckTarget[];
+}
+
+export interface HistoryStats {
+  total_reports: number;
+  total_claims: number;
+  total_fact_checks: number;
+  total_questions: number;
+  latest_generated_at: string | null;
+}
+
+export interface HistoryResponse {
+  total: number;
+  stats: HistoryStats;
+  items: HistoryEntry[];
+}

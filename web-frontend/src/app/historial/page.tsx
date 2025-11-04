@@ -124,28 +124,32 @@ function HistoryCard({ entry }: { entry: HistoryEntry }) {
               Fact-check propuestos
             </p>
             <ul className="space-y-2">
-              {entry.fact_check_targets.slice(0, 2).map((target, index) => (
-                <li
-                  key={`${entry.id}-fact-${index}`}
-                  className="rounded-lg border border-border/50 bg-muted/30 p-3"
-                >
-                  <p className="font-medium text-foreground">{target.claim}</p>
-                  <p className="mt-1 text-xs leading-relaxed">{target.verification_plan}</p>
-                  {target.suggested_sources.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
-                      {target.suggested_sources.map((source) => (
-                        <Badge
-                          key={`${entry.id}-source-${source}`}
-                          variant="outline"
-                          className="rounded-full border-border/50"
-                        >
-                          {source}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </li>
-              ))}
+              {entry.fact_check_targets.slice(0, 2).map((target, index) => {
+                const sources = target.suggested_sources ?? [];
+
+                return (
+                  <li
+                    key={`${entry.id}-fact-${index}`}
+                    className="rounded-lg border border-border/50 bg-muted/30 p-3"
+                  >
+                    <p className="font-medium text-foreground">{target.claim}</p>
+                    <p className="mt-1 text-xs leading-relaxed">{target.verification_plan}</p>
+                    {sources.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
+                        {sources.map((source) => (
+                          <Badge
+                            key={`${entry.id}-source-${source}`}
+                            variant="outline"
+                            className="rounded-full border-border/50"
+                          >
+                            {source}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}

@@ -1,10 +1,8 @@
 "use client";
 
 import * as React from "react";
-import DOMPurify from "dompurify";
 import { Clipboard, Check, FileText, ListChecks, Quote, ShieldQuestion, Timer } from "lucide-react";
-import { marked } from "marked";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -284,6 +282,7 @@ function FactCheckCard({
 
 function OutputTabs({ markdown, rawJson }: { markdown: string; rawJson: Record<string, unknown> }) {
   const [copied, setCopied] = useState(false);
+  const sanitizedMarkdown = useSanitizedMarkdown(markdown);
 
   const handleCopy = async (value: string) => {
     await navigator.clipboard.writeText(value);
@@ -317,7 +316,7 @@ function OutputTabs({ markdown, rawJson }: { markdown: string; rawJson: Record<s
             <ScrollArea className="max-h-[400px] rounded-xl border border-border/60 bg-background/70 p-4">
               <article
                 className="space-y-4 text-sm leading-relaxed text-muted-foreground [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-foreground [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-foreground [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-primary/40 [&_blockquote]:pl-4 [&_blockquote]:text-foreground"
-                dangerouslySetInnerHTML={{ __html: markdownToHtml(markdown) }}
+                dangerouslySetInnerHTML={{ __html: sanitizedMarkdown }}
               />
             </ScrollArea>
           </TabsContent>
@@ -347,7 +346,35 @@ function CopyButton({ label, onCopy, copied }: { label: string; onCopy: () => vo
   );
 }
 
-function markdownToHtml(markdown: string): string {
-  const raw = marked.parse(markdown, { breaks: true }) as string;
-  return DOMPurify.sanitize(raw);
+function useSanitizedMarkdown(markdown: string): string {
+  const [sanitized, setSanitized] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function convert() {
+      try {
+        const [{ marked }, dompurify] = await Promise.all([import("marked"), import("dompurify")]);
+        const raw = marked.parse(markdown, { breaks: true }) as string;
+        const clean = dompurify.default.sanitize(raw);
+
+        if (mounted) {
+          setSanitized(clean);
+        }
+      } catch (error) {
+        if (mounted) {
+          setSanitized("<p>No se pudo renderizar el informe.</p>");
+        }
+        console.error("Error rendering markdown", error);
+      }
+    }
+
+    convert();
+
+    return () => {
+      mounted = false;
+    };
+  }, [markdown]);
+
+  return sanitized;
 }

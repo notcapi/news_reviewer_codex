@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Article Analyst - Interfaz Web</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='styles.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body>
+    <div class="background"></div>
+    <nav class="top-nav">
+      <div class="top-nav__brand">
+        <span class="logo">AA</span>
+        <span class="top-nav__title">Article Analyst</span>
+      </div>
+      <div class="top-nav__links">
+        <a href="https://github.com/borjagalvan/news_reviewer_codex" target="_blank" rel="noopener">Repositorio</a>
+        <a href="https://github.com/borjagalvan/news_reviewer_codex/blob/main/README.md" target="_blank" rel="noopener">README</a>
+      </div>
+    </nav>
+    <header class="hero">
+      <div class="hero__content">
+        <span class="badge">beta</span>
+        <h1>Article Analyst</h1>
+        <p>
+          Desglosa cualquier artículo en segundos: resumen 5W, línea de tiempo, claims contrastados, sesgos, fact-check y preguntas críticas listas para la redacción.
+        </p>
+      </div>
+    </header>
+
+    <main class="main-layout">
+      <section class="panel glass panel--form">
+        {% if error %}
+          <div class="alert alert--error">
+            <strong>Ups:</strong> {{ error }}
+          </div>
+        {% endif %}
+
+        <header class="panel__header">
+          <h2>Nuevo análisis</h2>
+          <p class="muted">Pega la URL o el texto completo del artículo. Opcionalmente guarda los archivos en <code>outputs/</code>.</p>
+        </header>
+
+        <form method="post" action="/analyze" class="form">
+          <fieldset class="form__group form__group--tiles">
+            <legend>Fuente del artículo</legend>
+            <label class="tile{% if form_state.input_type == 'url' %} tile--active{% endif %}">
+              <input type="radio" name="input_type" value="url" {% if form_state.input_type == 'url' %}checked{% endif %} />
+              <span class="tile__title">Desde URL</span>
+              <span class="tile__hint">Ideal para artículos disponibles en la red</span>
+            </label>
+            <label class="tile{% if form_state.input_type == 'text' %} tile--active{% endif %}">
+              <input type="radio" name="input_type" value="text" {% if form_state.input_type == 'text' %}checked{% endif %} />
+              <span class="tile__title">Texto pegado</span>
+              <span class="tile__hint">Para borradores o contenido offline</span>
+            </label>
+          </fieldset>
+
+          <div class="form__group form__group--field" id="source-url">
+            <label for="url">URL del artículo</label>
+            <input type="url" id="url" name="url" placeholder="https://ejemplo.com/articulo" value="{{ form_state.url or '' }}" />
+          </div>
+
+          <div class="form__group form__group--field hidden" id="source-text">
+            <label for="article_text">Texto del artículo</label>
+            <textarea id="article_text" name="article_text" rows="10" placeholder="Pega aquí el contenido completo del artículo">{{ form_state.article_text or '' }}</textarea>
+          </div>
+
+          <div class="form__group form__group--inline">
+            <label class="checkbox">
+              <input type="checkbox" name="save_outputs" {% if form_state.save %}checked{% endif %} />
+              Guardar archivos en <code>outputs/</code>
+            </label>
+          </div>
+
+          <button type="submit" class="button button--primary">
+            <span>Analizar artículo</span>
+          </button>
+        </form>
+      </section>
+
+      {% if result %}
+        <section class="panel glass panel--result">
+          <header class="panel__header">
+            <div>
+              <h2>Informe generado</h2>
+              <p class="muted">Fuente analizada: {{ result.source }}</p>
+            </div>
+            <div class="metrics">
+              <div class="metric">
+                <span class="metric__label">Claims</span>
+                <span class="metric__value">{{ result.summary_counts.claims }}</span>
+              </div>
+              <div class="metric">
+                <span class="metric__label">Fact-check</span>
+                <span class="metric__value">{{ result.summary_counts.fact_checks }}</span>
+              </div>
+              <div class="metric">
+                <span class="metric__label">Preguntas</span>
+                <span class="metric__value">{{ result.summary_counts.questions }}</span>
+              </div>
+            </div>
+          </header>
+
+          <div class="panel__content report-wrapper">
+            <article class="report" aria-label="Informe en Markdown">
+              {{ result.html_report | safe }}
+            </article>
+          </div>
+
+          <details class="details">
+            <summary>Ver JSON estructurado</summary>
+            <pre class="code-block"><code>{{ result.json_output }}</code></pre>
+          </details>
+        </section>
+      {% else %}
+        <section class="panel glass panel--empty">
+          <div class="empty-state">
+            <h2>¿Todo listo para tu primer análisis?</h2>
+            <p>
+              Introduce una URL o pega el texto y obtendrás un resumen completo con línea de tiempo, claims contrastados, indicadores de sesgo, fact-check y contrapuntos listos para compartir.
+            </p>
+          </div>
+        </section>
+      {% endif %}
+    </main>
+
+    <footer class="footer">
+      <small>Construido con FastAPI + Article Analyst.</small>
+    </footer>
+
+    <script>
+      const urlSection = document.getElementById("source-url");
+      const textSection = document.getElementById("source-text");
+      const inputRadios = document.querySelectorAll("input[name='input_type']");
+
+      function toggleSource() {
+        const selected = document.querySelector("input[name='input_type']:checked").value;
+        if (selected === "url") {
+          urlSection.classList.remove("hidden");
+          textSection.classList.add("hidden");
+        } else {
+          urlSection.classList.add("hidden");
+          textSection.classList.remove("hidden");
+        }
+
+        document.querySelectorAll(".tile").forEach((tile) => tile.classList.remove("tile--active"));
+        const activeTile = document.querySelector(`.tile input[value='${selected}']`).parentElement;
+        activeTile.classList.add("tile--active");
+      }
+
+      inputRadios.forEach((radio) => radio.addEventListener("change", toggleSource));
+      toggleSource();
+    </script>
+  </body>
+</html>

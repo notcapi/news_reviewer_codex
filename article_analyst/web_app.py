@@ -4,14 +4,16 @@ import json
 import os
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Literal, Optional
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from markdown import markdown
+from pydantic import BaseModel, HttpUrl
 
 from .cli import build_analyzer
 from .pipeline import ArticleAnalyzer
@@ -62,6 +64,16 @@ app = FastAPI(title="Article Analyst Web")
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
+FRONTEND_ORIGIN = os.environ.get("FRONTEND_ORIGIN", "http://localhost:3000")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[FRONTEND_ORIGIN, "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
@@ -75,6 +87,21 @@ async def index(request: Request) -> HTMLResponse:
         "form_state": _form_state(),
     }
     return templates.TemplateResponse("index.html", context)
+
+
+class AnalyzePayload(BaseModel):
+    input_type: Literal["url", "text"] = "url"
+    url: Optional[HttpUrl] = None
+    article_text: Optional[str] = None
+    save_outputs: bool = False
+
+    def ensure_valid(self) -> None:
+        if self.input_type == "url":
+            if not self.url:
+                raise HTTPException(status_code=400, detail="Debes proporcionar una URL válida para analizar.")
+        else:
+            if not self.article_text or not self.article_text.strip():
+                raise HTTPException(status_code=400, detail="Debes proporcionar un texto para analizar.")
 
 
 def _form_defaults() -> Dict[str, Any]:
@@ -136,6 +163,36 @@ async def analyze(
         }
 
     return templates.TemplateResponse("index.html", context)
+
+
+@app.post("/api/analyze")
+async def analyze_api(payload: AnalyzePayload) -> Dict[str, Any]:
+    analyzer = get_analyzer()
+    payload.ensure_valid()
+
+    try:
+        if payload.input_type == "url":
+            assert payload.url  # for type checker
+            bundle = analyzer.analyze_url(str(payload.url), save=payload.save_outputs)
+            source_label = str(payload.url)
+        else:
+            assert payload.article_text  # for type checker
+            bundle = analyzer.analyze_text(payload.article_text, save=payload.save_outputs)
+            source_label = "Texto proporcionado"
+    except Exception as exc:  # noqa: BLE001 - devolvemos error específico al cliente
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return {
+        "source": source_label,
+        "analysis": bundle.analysis.model_dump(mode="json"),
+        "markdown_report": bundle.markdown_report,
+        "raw_json": bundle.raw_json,
+        "summary_counts": {
+            "claims": len(bundle.analysis.claims),
+            "questions": len(bundle.analysis.critical_questions),
+            "fact_checks": len(bundle.analysis.fact_check_targets),
+        },
+    }
 
 
 __all__ = ["app", "get_analyzer"]

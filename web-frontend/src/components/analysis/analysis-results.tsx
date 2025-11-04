@@ -1,7 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { Clipboard, Check, FileText, ListChecks, Quote, ShieldQuestion, Timer } from "lucide-react";
+import Clipboard from "lucide-react/dist/esm/icons/clipboard";
+import Check from "lucide-react/dist/esm/icons/check";
+import FileText from "lucide-react/dist/esm/icons/file-text";
+import ListChecks from "lucide-react/dist/esm/icons/list-checks";
+import Quote from "lucide-react/dist/esm/icons/quote";
+import ShieldQuestion from "lucide-react/dist/esm/icons/shield-question";
+import Timer from "lucide-react/dist/esm/icons/timer";
 import { useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";

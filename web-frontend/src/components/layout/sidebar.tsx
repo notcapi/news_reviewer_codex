@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/sheet";
 import { primaryNav } from "@/config/navigation";
 import { cn } from "@/lib/utils";
-import { Menu } from "lucide-react";
+import Menu from "lucide-react/dist/esm/icons/menu";
 
 export function AppSidebar() {
   const pathname = usePathname();

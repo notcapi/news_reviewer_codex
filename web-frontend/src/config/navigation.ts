@@ -1,4 +1,6 @@
-import { Clock, PenSquare, Settings } from "lucide-react";
+import Clock from "lucide-react/dist/esm/icons/clock";
+import PenSquare from "lucide-react/dist/esm/icons/pen-square";
+import Settings from "lucide-react/dist/esm/icons/settings";
 import type { LucideIcon } from "lucide-react";
 
 export type NavEntry = {

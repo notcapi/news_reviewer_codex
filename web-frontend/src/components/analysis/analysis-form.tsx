@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Upload } from "lucide-react";
+import Loader2 from "lucide-react/dist/esm/icons/loader-2";
+import Upload from "lucide-react/dist/esm/icons/upload";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 

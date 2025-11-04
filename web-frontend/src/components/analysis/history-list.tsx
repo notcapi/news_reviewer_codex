@@ -2,7 +2,7 @@
 
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import { ExternalLink } from "lucide-react";
+import ExternalLink from "lucide-react/dist/esm/icons/external-link";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

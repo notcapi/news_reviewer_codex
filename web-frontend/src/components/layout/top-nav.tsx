@@ -11,7 +11,8 @@ import {
 } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { MobileAppSidebar } from "./sidebar";
-import { Bell, Sparkles } from "lucide-react";
+import Bell from "lucide-react/dist/esm/icons/bell";
+import Sparkles from "lucide-react/dist/esm/icons/sparkles";
 
 export function TopNav() {
   return (

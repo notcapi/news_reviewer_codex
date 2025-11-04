@@ -17,7 +17,11 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { ArrowUpRight, Link2, Loader2, Newspaper, Sparkles } from "lucide-react";
+import ArrowUpRight from "lucide-react/dist/esm/icons/arrow-up-right";
+import Link2 from "lucide-react/dist/esm/icons/link-2";
+import Loader2 from "lucide-react/dist/esm/icons/loader-2";
+import Newspaper from "lucide-react/dist/esm/icons/newspaper";
+import Sparkles from "lucide-react/dist/esm/icons/sparkles";
 
 const recentReports = [
   {

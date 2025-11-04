@@ -2,14 +2,24 @@
 
 import * as React from "react";
 
+import dynamic from "next/dynamic";
+
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAnalyzerStore } from "@/store/analyzer-store";
 import { toast } from "sonner";
 
 import { AnalysisForm } from "./analysis-form";
-import { AnalysisHistory } from "./history-list";
-import { AnalysisResults } from "./analysis-results";
+
+const AnalysisHistory = dynamic(() => import("./history-list").then((mod) => ({ default: mod.AnalysisHistory })), {
+  ssr: false,
+  loading: () => <HistoryPlaceholder />,
+});
+
+const AnalysisResults = dynamic(() => import("./analysis-results").then((mod) => ({ default: mod.AnalysisResults })), {
+  ssr: false,
+  loading: () => <ResultsPlaceholder />,
+});
 
 export function AnalyzePageContent() {
   const result = useAnalyzerStore((state) => state.result);
@@ -59,4 +69,19 @@ export function AnalyzePageContent() {
       {result && <AnalysisResults result={result} />}
     </section>
   );
+}
+
+function HistoryPlaceholder() {
+  return (
+    <Card className="border border-border/60 bg-card/60 backdrop-blur">
+      <CardHeader>
+        <CardTitle className="text-base">Historial reciente</CardTitle>
+        <CardDescription>Se cargará al finalizar el primer análisis.</CardDescription>
+      </CardHeader>
+    </Card>
+  );
+}
+
+function ResultsPlaceholder() {
+  return null;
 }

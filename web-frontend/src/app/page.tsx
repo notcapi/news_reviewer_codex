@@ -119,7 +119,7 @@ const { items, stats } = await fetchHistory({
 
   return (
     <ThemeBoundary>
-      <AppShell>
+      <AppShell stats={{ totalReports: stats.total_reports, totalClaims: stats.total_claims }}>
         <div className="flex flex-col gap-8">
         <HeroBanner latestReport={latestReport} stats={stats} />
 

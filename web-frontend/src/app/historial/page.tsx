@@ -35,7 +35,7 @@ export default async function HistoryPage() {
 
   return (
     <ThemeBoundary>
-      <AppShell>
+      <AppShell stats={{ totalReports: stats.total_reports, totalClaims: stats.total_claims }}>
         <section className="space-y-6">
         <div className="space-y-2">
           <h1 className="text-3xl font-semibold tracking-tight">Historial de análisis</h1>

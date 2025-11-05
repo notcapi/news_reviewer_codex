@@ -8,6 +8,7 @@ export type NavEntry = {
   href: string;
   icon: LucideIcon;
   description: string;
+  shortcut?: string;
 };
 
 export const primaryNav: NavEntry[] = [
@@ -15,18 +16,21 @@ export const primaryNav: NavEntry[] = [
     title: "Nuevo análisis",
     href: "/",
     icon: PenSquare,
-    description: "Analiza un artículo con URL o texto plano.",
+    description: "Lanza el agente con URL o texto plano.",
+    shortcut: "⌘1",
   },
   {
     title: "Historial",
     href: "/historial",
     icon: Clock,
-    description: "Consulta informes anteriores y descárgalos.",
+    description: "Explora informes recientes y planes de verificación.",
+    shortcut: "⌘2",
   },
   {
     title: "Configuración",
     href: "/configuracion",
     icon: Settings,
-    description: "Gestiona llaves API y preferencias avanzadas.",
+    description: "Gestiona credenciales y preferencias.",
+    shortcut: "⌘3",
   },
 ];

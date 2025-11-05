@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { MobileAppSidebar } from "./sidebar";
-import Bell from "lucide-react/dist/esm/icons/bell";
 import Sparkles from "lucide-react/dist/esm/icons/sparkles";
 
 export function TopNav() {
@@ -31,14 +30,6 @@ export function TopNav() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="hidden h-9 w-9 rounded-full border border-transparent bg-background/60 text-muted-foreground hover:border-border/70 hover:text-foreground lg:inline-flex"
-          >
-            <Bell className="h-[18px] w-[18px]" />
-            <span className="sr-only">Ver notificaciones</span>
-          </Button>
           <ModeToggle />
           <Separator orientation="vertical" className="mx-2 hidden h-6 lg:block" />
           <Button

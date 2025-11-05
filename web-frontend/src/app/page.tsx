@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { ModeToggle } from "@/components/mode-toggle";
+import { ThemeBoundary } from "@/components/theme-boundary";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -117,8 +118,9 @@ const { items, stats } = await fetchHistory({
     .slice(0, 3);
 
   return (
-    <AppShell>
-      <div className="flex flex-col gap-8">
+    <ThemeBoundary>
+      <AppShell>
+        <div className="flex flex-col gap-8">
         <HeroBanner latestReport={latestReport} stats={stats} />
 
         <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -257,7 +259,8 @@ const { items, stats } = await fetchHistory({
           </Card>
         </section>
       </div>
-    </AppShell>
+      </AppShell>
+    </ThemeBoundary>
   );
 }
 

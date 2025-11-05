@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { ThemeBoundary } from "@/components/theme-boundary";
 
 const tips = [
   {
@@ -22,8 +23,9 @@ const tips = [
 
 export default function GuidePage() {
   return (
-    <AppShell>
-      <section className="space-y-6">
+    <ThemeBoundary>
+      <AppShell>
+        <section className="space-y-6">
         <div className="space-y-2">
           <h1 className="text-3xl font-semibold tracking-tight">Guía de uso rápido</h1>
           <p className="text-muted-foreground">
@@ -50,6 +52,7 @@ export default function GuidePage() {
           </CardContent>
         </Card>
       </section>
-    </AppShell>
+      </AppShell>
+    </ThemeBoundary>
   );
 }

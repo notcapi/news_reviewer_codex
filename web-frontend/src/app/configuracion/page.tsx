@@ -3,11 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ThemeBoundary } from "@/components/theme-boundary";
 
 export default function SettingsPage() {
   return (
-    <AppShell>
-      <section className="space-y-6">
+    <ThemeBoundary>
+      <AppShell>
+        <section className="space-y-6">
         <div className="space-y-2">
           <h1 className="text-3xl font-semibold tracking-tight">Preferencias del agente</h1>
           <p className="text-muted-foreground">
@@ -55,6 +57,7 @@ export default function SettingsPage() {
           </Card>
         </div>
       </section>
-    </AppShell>
+      </AppShell>
+    </ThemeBoundary>
   );
 }

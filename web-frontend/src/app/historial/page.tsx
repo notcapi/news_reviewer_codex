@@ -14,6 +14,7 @@ import ArrowUpRight from "lucide-react/dist/esm/icons/arrow-up-right";
 import FileText from "lucide-react/dist/esm/icons/file-text";
 import Link2 from "lucide-react/dist/esm/icons/link-2";
 
+import { ThemeBoundary } from "@/components/theme-boundary";
 import { fetchHistory } from "@/lib/api-client";
 import { formatDateTime, formatNumber, truncate } from "@/lib/format";
 import type { HistoryEntry } from "@/types/analysis";
@@ -33,8 +34,9 @@ export default async function HistoryPage() {
   const hasMore = stats.total_reports > items.length;
 
   return (
-    <AppShell>
-      <section className="space-y-6">
+    <ThemeBoundary>
+      <AppShell>
+        <section className="space-y-6">
         <div className="space-y-2">
           <h1 className="text-3xl font-semibold tracking-tight">Historial de análisis</h1>
           <p className="text-sm text-muted-foreground">
@@ -68,7 +70,8 @@ export default async function HistoryPage() {
           )}
         </div>
       </section>
-    </AppShell>
+      </AppShell>
+    </ThemeBoundary>
   );
 }
 

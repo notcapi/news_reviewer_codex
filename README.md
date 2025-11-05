@@ -1,22 +1,25 @@
-# Analista de artículos con LangChain + LlamaFarm
+# Analista de artículos con LangChain + LlamaFarm + Next.js
 
-Herramienta en Python que automatiza el análisis periodístico de un artículo, ya sea desde una URL o texto plano. Utiliza LangChain como framework orquestador (según la documentación oficial consultada vía Context7) y consume un modelo gratuito alojado en LlamaFarm mediante su API OpenAI-like.
+Suite que automatiza el análisis periodístico de artículos y presenta los resultados en CLI, API y una interfaz web moderna. El backend en Python usa LangChain para orquestar modelos compatibles con la API OpenAI-like de LlamaFarm (o Groq), mientras que el frontend en Next.js muestra informes, métricas e historial basados en los JSON generados.
 
 ## Capacidades
 
 - **Extracción de contenido**: descarga HTML, limpia y mantiene solo el texto útil con *trafilatura* y *BeautifulSoup*.
 - **Metadatos**: detecta idioma probable y título candidato.
-- **Análisis estructurado**: genera resumen con contexto (quién/qué/cuándo/dónde), línea de tiempo, claims con citas evaluadas, tono y sesgos con indicadores, incertidumbres, fact-check detallado, contrapuntos, riesgos e interrogantes críticas.
+- **Análisis estructurado**: genera resumen 5W + contexto, línea de tiempo (3–5 hitos), claims con cita literal y nivel de soporte, tono/sesgo con indicadores, incertidumbres, riesgos, fact-check accionable, contrapuntos y preguntas críticas incisivas.
 - **Validación**: valida la estructura con Pydantic para asegurar JSON consistente.
-- **Presentación**: persiste un `.json` estructurado y un informe `.md` listo para compartir.
+- **Persistencia**: guarda automáticamente `.json` y `.md` en `outputs/` listos para reutilizar.
+- **API REST**: expone `/api/analyze` y `/api/history` (nuevo) sobre FastAPI.
+- **Dashboard Next.js**: landing enriquecida con métricas reales, preguntas críticas y fact-checks recientes, además de una página de historial que lista los informes producidos.
 
 ## Requisitos
 
 - Python 3.11 o superior.
 - Dependencias definidas en `pyproject.toml`.
 - Variable de entorno `LLAMAFARM_API_KEY` con la clave del servicio.
+- Node.js 22.x (se facilita `.nvmrc`) para la interfaz web en `web-frontend/`.
 
-## Instalación rápida
+## Instalación rápida (CLI y API)
 
 ```bash
 python -m venv .venv
@@ -53,6 +56,53 @@ Opciones útiles:
 
 Los resultados se almacenan en `outputs/<timestamp>_<slug>.json` y `.md`.
 
+## Interfaz web (FastAPI + Next.js)
+
+### API FastAPI
+
+```bash
+source .venv/bin/activate
+uvicorn article_analyst.web_app:app --reload
+```
+
+Endpoints clave:
+
+- `POST /api/analyze`: recibe `{input_type: "url"|"text", url?, article_text?, save_outputs?}` y devuelve el JSON validado, markdown y contadores.
+- `GET /api/history`: expone (`total`, `stats`, `items[]`) leyendo los archivos de `outputs/`. Cada item incluye resumen, métricas, URLs del JSON/Markdown y planes de fact-check.
+- `/outputs/...`: servidor estático que expone los archivos generados.
+
+Variables útiles en `.env` (además de la API key):
+
+```env
+FRONTEND_ORIGIN=http://localhost:3000
+NEXT_PUBLIC_ANALYZER_API=http://localhost:8000
+ARTICLE_ANALYST_OUTPUT_DIR=/ruta/a/outputs  # opcional si deseas otra carpeta
+```
+
+### Interfaz Next.js (dashboard moderno)
+
+```bash
+cd web-frontend
+npm install
+npm run dev  # requiere Node 22.x (usa nvm use 22)
+```
+
+Características principales del dashboard:
+
+- Landing con métricas reales (informes, claims, fact-checks) y últimas preguntas críticas / verificaciones.
+- Widget “Último informe” con acceso al Markdown y fuente original.
+- Página `/analizar` con formulario (URL o texto), historial en sesión y resultados enriquecidos (Markdown/JSON).
+- Página `/historial` que lista informes reales, preguntas críticas y planes de verificación; enlaces directos a JSON/Markdown desde la API.
+
+Para despliegue en producción (por ejemplo Vercel) ejecuta:
+
+```bash
+npm run build
+npm start
+```
+
+Asegúrate de desplegar la API FastAPI accesible y de propagar las variables `NEXT_PUBLIC_ANALYZER_API` y `FRONTEND_ORIGIN`.
+
 ## Arquitectura
 
 1. **Extracción** (`ContentExtractor`): descarga o limpia el contenido original.
@@ -60,16 +110,14 @@ Los resultados se almacenan en `outputs/<timestamp>_<slug>.json` y `.md`.
 3. **IA** (`LlamaFarmChatModel`): invoca el modelo remoto mediante LangChain.
 4. **Validación** (`ModelAnalysisOutput`): asegura formato y campos obligatorios.
 5. **Presentación** (`build_markdown_report`): genera Markdown y guarda ambos formatos.
+6. **API & UI**: FastAPI ofrece CLI y endpoints REST; Next.js consume `/api/analyze` y `/api/history` para renderizar resultados y el historial.
 
-## Interfaz web
+## Flujo de trabajo recomendado
 
-Incluye una interfaz web ligera en FastAPI para lanzar análisis desde el navegador.
-
-```bash
-uvicorn article_analyst.web_app:app --reload
-```
-
-Visita `http://127.0.0.1:8000`, pega una URL o texto completo y obtén el informe enriquecido (resumen 5W, línea de tiempo, claims con cita y soporte, indicadores de sesgo, fact-check y contrapuntos) junto al JSON estructurado. Desde la página puedes decidir si guardar o no los archivos en `outputs/`.
+1. Inicia el backend FastAPI (CLI + API) con el entorno virtual activado.
+2. Inicia el dashboard Next.js (`npm run dev`) para tener la UI conectada.
+3. Lanza análisis desde la CLI o desde `/analizar`.
+4. Revisa métricas y preguntas críticas en la landing y accede a informes pasados desde `/historial`.
 
 ## Desarrollo
 
@@ -90,6 +138,7 @@ Visita `http://127.0.0.1:8000`, pega una URL o texto completo y obtén el inform
 
 ## Próximos pasos sugeridos
 
-1. Añadir pruebas unitarias para el sanitizado y la renderización Markdown.
-2. Validar de forma automática la respuesta del modelo antes de persistir (p. ej. reintentos inteligentes).
-3. Implementar un modo batch para carpetas completas de artículos.
+1. Añadir pruebas unitarias para sanitizado, renderizado y API `/api/history`.
+2. Validar de forma automática la respuesta del modelo con reintentos antes de persistir.
+3. Implementar búsqueda y filtros (fecha, medio, nivel de riesgo) en `/historial`.
+4. Incorporar autenticación y control de cuotas en la interfaz Next.js.

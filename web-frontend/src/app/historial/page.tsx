@@ -20,8 +20,16 @@ import type { HistoryEntry } from "@/types/analysis";
 
 const API_BASE = process.env.NEXT_PUBLIC_ANALYZER_API ?? "http://localhost:8000";
 
+const PAGE_SIZE = 24;
+
 export default async function HistoryPage() {
-  const { items, stats } = await fetchHistory(100, 0, { cache: "no-store" });
+  const { items, stats } = await fetchHistory({
+    limit: PAGE_SIZE,
+    includeDetails: true,
+    init: {
+      next: { revalidate: 60 },
+    },
+  });
   const hasMore = stats.total_reports > items.length;
 
   return (

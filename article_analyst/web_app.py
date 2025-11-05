@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -29,6 +30,8 @@ STATIC_DIR = BASE_DIR / "static"
 OUTPUT_DIR = Path(
     os.environ.get("ARTICLE_ANALYST_OUTPUT_DIR", str(Path.cwd() / "outputs"))
 ).resolve()
+HISTORY_CACHE_TTL = int(os.environ.get("ARTICLE_ANALYST_HISTORY_TTL", "60"))
+_HISTORY_CACHE: Dict[Tuple[int, int, bool], Tuple[float, Tuple[int, Dict[str, Any], List[Dict[str, Any]]]]] = {}
 
 
 @lru_cache()
@@ -205,10 +208,11 @@ async def analyze_api(payload: AnalyzePayload) -> Dict[str, Any]:
 
 @app.get("/api/history")
 async def history_api(
-    limit: int = Query(10, ge=1, le=100),
+    limit: int = Query(10, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    include_details: bool = Query(False),
 ) -> Dict[str, Any]:
-    total, stats, entries = _collect_history(limit=limit, offset=offset)
+    total, stats, entries = _collect_history(limit=limit, offset=offset, include_details=include_details)
     return {
         "total": total,
         "stats": stats,
@@ -219,26 +223,41 @@ async def history_api(
 __all__ = ["app", "get_analyzer"]
 
 
-def _collect_history(limit: int, offset: int) -> Tuple[int, Dict[str, Any], List[Dict[str, Any]]]:
+def _collect_history(
+    *,
+    limit: int,
+    offset: int,
+    include_details: bool,
+) -> Tuple[int, Dict[str, Any], List[Dict[str, Any]]]:
+    cache_key = (limit, offset, include_details)
+    now = time.time()
+    cached = _HISTORY_CACHE.get(cache_key)
+    if cached and (now - cached[0]) < HISTORY_CACHE_TTL:
+        return cached[1]
+
     if not OUTPUT_DIR.exists():
-        return 0, {
+        result = 0, {
             "total_reports": 0,
             "total_claims": 0,
             "total_fact_checks": 0,
             "total_questions": 0,
             "latest_generated_at": None,
         }, []
+        _HISTORY_CACHE[cache_key] = (now, result)
+        return result
 
     json_files = sorted(OUTPUT_DIR.glob("*.json"))
     total = len(json_files)
     if total == 0:
-        return total, {
+        result = total, {
             "total_reports": 0,
             "total_claims": 0,
             "total_fact_checks": 0,
             "total_questions": 0,
             "latest_generated_at": None,
         }, []
+        _HISTORY_CACHE[cache_key] = (now, result)
+        return result
 
     entries: List[Dict[str, Any]] = []
     aggregated = {
@@ -285,29 +304,35 @@ def _collect_history(limit: int, offset: int) -> Tuple[int, Dict[str, Any], List
                 source_domain = None
 
         if offset <= idx < offset + limit:
-            entries.append(
-                {
-                    "id": base_name,
-                    "summary": summary,
-                    "source_url": source_url,
-                    "source_domain": source_domain,
-                    "title": detected_title,
-                    "generated_at": generated_iso,
-                    "claims_count": len(claims),
-                    "fact_check_count": len(fact_checks),
-                    "question_count": len(questions),
-                    "timeline_count": len(timeline),
-                    "json_filename": json_path.name,
-                    "markdown_filename": markdown_path.name if markdown_path.exists() else None,
-                    "markdown_url": f"/outputs/{markdown_path.name}" if markdown_path.exists() else None,
-                    "json_url": f"/outputs/{json_path.name}",
-                    "timeline": timeline,
-                    "critical_questions": questions,
-                    "fact_check_targets": fact_checks,
-                }
-            )
+            entry = {
+                "id": base_name,
+                "summary": summary,
+                "source_url": source_url,
+                "source_domain": source_domain,
+                "title": detected_title,
+                "generated_at": generated_iso,
+                "claims_count": len(claims),
+                "fact_check_count": len(fact_checks),
+                "question_count": len(questions),
+                "timeline_count": len(timeline),
+                "json_filename": json_path.name,
+                "markdown_filename": markdown_path.name if markdown_path.exists() else None,
+                "markdown_url": f"/outputs/{markdown_path.name}" if markdown_path.exists() else None,
+                "json_url": f"/outputs/{json_path.name}",
+            }
 
-    return total, aggregated, entries
+            if include_details:
+                entry["critical_questions"] = questions
+                entry["fact_check_targets"] = fact_checks
+            else:
+                entry["critical_questions"] = []
+                entry["fact_check_targets"] = []
+
+            entries.append(entry)
+
+    result = total, aggregated, entries
+    _HISTORY_CACHE[cache_key] = (now, result)
+    return result
 
 
 def _parse_markdown_metadata(md_path: Path) -> Tuple[Optional[str], Optional[str], Optional[str]]:

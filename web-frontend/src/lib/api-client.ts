@@ -69,14 +69,27 @@ async function safeParseJSON(response: Response): Promise<unknown> {
   }
 }
 
-export async function fetchHistory(
-  limit = 10,
-  offset = 0,
-  init?: RequestInit & { next?: { revalidate?: number | false; tags?: string[] } },
-): Promise<HistoryResponse> {
+type HistoryFetchOptions = {
+  limit?: number;
+  offset?: number;
+  includeDetails?: boolean;
+  init?: RequestInit & { next?: { revalidate?: number | false; tags?: string[] } };
+};
+
+export async function fetchHistory(options: HistoryFetchOptions = {}): Promise<HistoryResponse> {
+  const {
+    limit = 10,
+    offset = 0,
+    includeDetails = false,
+    init,
+  } = options;
+
   const url = new URL(`${API_BASE}/api/history`);
   url.searchParams.set("limit", String(limit));
   url.searchParams.set("offset", String(offset));
+  if (includeDetails) {
+    url.searchParams.set("include_details", "1");
+  }
 
   const response = await fetch(url.toString(), init);
 

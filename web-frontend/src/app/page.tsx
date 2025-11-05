@@ -82,9 +82,13 @@ function toLandingReport(item: HistoryEntry): LandingReport {
 }
 
 export default async function Home() {
-  const { items, stats } = await fetchHistory(12, 0, {
+const { items, stats } = await fetchHistory({
+  limit: 12,
+  includeDetails: true,
+  init: {
     next: { revalidate: 120 },
-  });
+  },
+});
 
   const recentReports = items.map(toLandingReport);
   const latestReport = recentReports[0] ?? null;

@@ -41,9 +41,14 @@ export function TopNav() {
           </Button>
           <ModeToggle />
           <Separator orientation="vertical" className="mx-2 hidden h-6 lg:block" />
-          <Button className="hidden gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold tracking-tight text-primary-foreground shadow-sm transition hover:bg-primary/90 lg:inline-flex">
-            <Sparkles className="h-[18px] w-[18px]" />
-            Nuevo análisis
+          <Button
+            asChild
+            className="hidden gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold tracking-tight text-primary-foreground shadow-sm transition hover:bg-primary/90 lg:inline-flex"
+          >
+            <Link href="/analizar">
+              <Sparkles className="h-[18px] w-[18px]" />
+              Nuevo análisis
+            </Link>
           </Button>
           <Avatar className="h-9 w-9 border border-border/60 bg-muted/60">
             <AvatarImage alt="Usuario" src="" />
